@@ -1,0 +1,344 @@
+---
+title: "Practical 1: My first map"
+subtitle: "Introduction to Spatial Models (DTC: Statistics, Data Science and AI)"
+author: "Tin Hang (Henry) Hung"
+output:
+  github_document:
+    toc: true
+    html_preview: false
+---
+
+```{r setup, include = FALSE}
+# Show code and output; keep package start-up messages out of the document
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 7, fig.height = 5)
+```
+
+In this practical you will handle and visualise **vector** data with `sf` and
+**raster** data with `terra`, the two core packages for spatial data in R.
+
+**Data** (in the `data/` folder next to this file):
+
+| File | Contents |
+|---|---|
+| `ww/ww.shp` | Wytham Woods stand polygons (WGS 84, EPSG:4326) |
+| `oaks.csv` | Oak tree locations (`Sample`, `Latitude`, `Longitude`) |
+| `tavg.tif` | WorldClim 2.1 monthly mean temperature, 30 arc-second, UK extent |
+
+⌛ **25 minutes** · practical 1 of 5 in a 2-hour session
+
+# Your route through the 25 minutes {.unnumbered}
+
+| Station | Minutes | What you do | You leave with |
+|---|---|---|---|
+| **0** Set up | 0–3 | Packages | A session that runs |
+| **1** Meet `sf` | 3–7 | Read, inspect and subset the Wytham Woods stands | A `ww` object you understand |
+| **2** Map it | 7–11 | Base plots, a `ggplot2` map, an area choropleth | A publication-style map |
+| **3** Points in polygons | 11–15 | CSV to points, count oaks per stand | A map of oaks per stand |
+| **4** Meet `terra` | 15–18 | Read and inspect WorldClim temperature | An annual mean temperature layer |
+| **5** Crop, mask, aggregate | 18–22 | Clip to the UK and coarsen | A UK-only raster at several resolutions |
+| **6** Raster meets vector | 22–25 | Values at points, summaries by polygon | Mean temperature per UK district |
+
+Sections marked **+ optional** can be skipped if you are short of time.
+
+# Station 0 · Set up
+
+⏱️ **0–3 min**
+
+## Packages
+
+```{r packages}
+# Install once if needed:
+# install.packages(c("sf", "terra", "ggplot2", "dplyr", "units", "rnaturalearth"))
+# ne_states() also needs a high-resolution data package that is NOT on CRAN:
+# install.packages("rnaturalearthhires", repos = "https://ropensci.r-universe.dev")
+
+library(sf)            # vector data ("simple features")
+library(terra)         # raster data (successor to the older 'raster' package)
+library(ggplot2)       # plotting; geom_sf() draws sf objects
+library(dplyr)         # mutate() and friends
+library(units)         # drop_units()
+library(rnaturalearth) # country and state boundaries
+```
+
+> ✅ **EXPECT TO SEE:** No red errors. Loading `sf` prints its GEOS, GDAL and PROJ versions; that is normal.
+
+> 🎉 **MILESTONE!** The two core spatial packages, `sf` and `terra`, are loaded.
+
+# Station 1 · Meet `sf`: the Wytham Woods stands
+
+⏱️ **3–7 min**
+
+
+Wytham Woods is a semi-natural woodland near Oxford and hosts one of the
+world's longest-running ecological studies. Its stands are classified as
+`N` (natural), `M` (mixed), `P-E19` (early 19th-century plantation),
+`P-M19` (mid 19th-century plantation) and `P-M20` (mid 20th-century plantation).
+
+## Read the stand polygons
+
+`st_read()` reads any GDAL-supported vector format. Point it at the `.shp`
+file; the `.dbf`, `.shx` and `.prj` files must sit next to it.
+
+```{r read-ww}
+ww <- st_read("data/ww/ww.shp", quiet = TRUE)
+# GDAL may report "invalid winding order"; it fixes the rings on reading.
+```
+
+## Inspect
+
+```{r inspect-ww}
+ww                 # CRS, bounding box and the first 10 features
+nrow(ww)           # number of features
+table(ww$stand)    # number of polygons of each stand type
+```
+
+**Question:** how many features does `ww` store?
+
+## Subset like a data frame
+
+```{r subset-ww}
+ww[1, ]                                        # first feature (all columns + geometry)
+ww[ww$stand == "P-M19", ]                      # all mid-19th-century plantation stands
+ww[ww$stand == "P-M19", "stand"]               # one column; the geometry is "sticky"
+ww[ww$stand == "P-M19", "stand", drop = TRUE]  # drop = TRUE removes the geometry
+st_geometry(ww)[[1]]                           # the geometry of feature 1 (an sfg object)
+```
+
+> ✅ **EXPECT TO SEE:** 90 stands (1 with an empty geometry): 46 `M`, 11 `N`, 4 `P-E19`, 11 `P-M19` and 18 `P-M20`. Geometry type `MULTIPOLYGON`, CRS WGS 84.
+
+> 🤔 **THINK IT THROUGH:** why does `ww[, "stand"]` still return a geometry column?
+>
+> *Answer:* geometries in `sf` are "sticky"; use `drop = TRUE` or `st_drop_geometry()` for a plain data frame.
+
+> 🎉 **MILESTONE!** You can read a vector file and treat it like a data frame, with the geometry carried along.
+
+# Station 2 · Map it
+
+⏱️ **7–11 min**
+
+## Quick base plots
+
+```{r base-plot}
+plot(ww)            # one panel per attribute
+plot(ww["stand"])   # only the 'stand' attribute
+```
+
+## A publication-quality map with `ggplot2`
+
+`ggplot2` builds a figure layer by layer. `geom_sf()` draws an `sf` object and
+`coord_sf()` handles the map projection and graticule.
+
+```{r ggplot-stands}
+ggplot(ww) +
+  geom_sf(aes(fill = stand), linewidth = 0.2, colour = "white") +
+  coord_sf() +
+  labs(title = "Wytham Woods: stands", fill = "Stand type") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right")
+```
+
+## Choropleth of stand area
+
+`st_area()` returns areas in m² as a `units` object. For longitude/latitude
+data `sf` uses the spherical `s2` engine, which is accurate, so there is no
+need to switch `s2` off. (`ww` already has an `area_m2` column; we recompute it
+to show how.)
+
+```{r area}
+ww <- mutate(ww, area_m2 = st_area(ww))           # e.g. 76773 [m^2]
+ww <- mutate(ww, area_m2 = drop_units(area_m2))   # plain numbers for ggplot scales
+
+ggplot(ww) +
+  geom_sf(aes(fill = area_m2), colour = "white", linewidth = 0.15) +
+  scale_fill_viridis_c(name = expression("Area (m"^2*")"), option = "B") +
+  labs(title = "Wytham Woods: stand area") +
+  theme_minimal()
+```
+
+> ✅ **EXPECT TO SEE:** Stand areas up to about 218,000 m² (median about 41,000 m²), plus one empty and one 12 m² sliver.
+
+> 🎉 **MILESTONE!** You can make a publication-style map of polygons coloured by an attribute.
+
+# Station 3 · Points in polygons
+
+⏱️ **11–15 min**
+
+## Oak trees as points
+
+`st_as_sf()` turns a data frame into points. `coords` is given as
+`c(x, y)`, i.e. `c(longitude, latitude)`; the order matters.
+
+```{r oaks}
+oaks <- read.csv("data/oaks.csv")
+oaks <- st_as_sf(oaks, coords = c("Longitude", "Latitude"), crs = 4326)
+
+# Every ggplot layer must be joined with '+'
+ggplot() +
+  geom_sf(data = ww, aes(fill = stand), linewidth = 0.2, colour = "white") +
+  geom_sf(data = oaks, size = 1, alpha = 0.8) +
+  coord_sf() +
+  labs(title = "Wytham Woods: stands and oaks", fill = "Stand type") +
+  theme_minimal(base_size = 12)
+```
+
+## Count trees per stand
+
+`st_intersects(x, y)` returns, for each feature of `x`, the indices of the
+features of `y` that it touches. The result is a list of class `sgbp`
+("sparse geometry binary predicate"), so `lengths()` gives the counts.
+
+```{r count-oaks}
+inter <- st_intersects(ww, oaks)
+class(inter)
+ww$n_oaks <- lengths(inter)   # number of oaks in each stand
+sum(ww$n_oaks)                # oaks that fall inside a stand
+
+ggplot(ww) +
+  geom_sf(aes(fill = n_oaks), colour = "white", linewidth = 0.15) +
+  scale_fill_viridis_c(name = "Number of oaks") +
+  labs(title = "Wytham Woods: oaks per stand") +
+  theme_minimal()
+```
+
+> ✅ **EXPECT TO SEE:** 210 oaks, of which 205 fall inside a stand.
+
+> 🎉 **MILESTONE!** You can turn a table of coordinates into points and count them per polygon.
+
+# Station 4 · Meet `terra`: WorldClim temperature
+
+⏱️ **15–18 min**
+
+
+We use mean monthly temperature for the UK from WorldClim.
+
+> **Tip:** `geodata` can download WorldClim directly. `res = 0.5` gives the same
+> 30 arc-second grid as `tavg.tif` (`res = 2.5` is a coarser 2.5 arc-minute grid).
+>
+> ```r
+> tavg <- geodata::worldclim_country(country = "United Kingdom", var = "tavg",
+>                                    res = 0.5, path = ".")
+> ```
+
+## Read and inspect the raster
+
+```{r read-tavg}
+tavg <- rast("data/tavg.tif")   # a SpatRaster with 12 layers, one per month
+ww_v <- vect(ww)                # terra's vector class (SpatVector)
+
+class(tavg); class(ww_v)
+res(tavg)                       # cell size in degrees (0.00833 deg = 30 arc-seconds)
+ext(tavg)                       # extent: xmin, xmax, ymin, ymax
+crs(tavg, describe = TRUE)      # WGS 84 (EPSG:4326)
+summary(ww_v)
+```
+
+## Plot, then average the 12 months
+
+```{r annual-mean}
+plot(tavg)                      # 12 panels
+tavg.ann <- mean(tavg)          # cell-wise mean across layers -> one layer named "mean"
+plot(tavg.ann)
+```
+
+> ✅ **EXPECT TO SEE:** `tavg` has 1500 × 1920 cells and 12 layers, cell size 0.00833°, extent −14 to 2 °E and 49.5 to 62 °N.
+
+> 🎉 **MILESTONE!** You can read a multi-layer raster and summarise it across layers.
+
+# Station 5 · Crop, mask, aggregate
+
+⏱️ **18–22 min**
+
+## UK boundaries
+
+```{r uk}
+uk <- ne_states("United Kingdom", returnclass = "sf")   # needs rnaturalearthhires
+ggplot(uk) + geom_sf() + theme_minimal()
+```
+
+## Crop and mask
+
+`crop()` cuts the raster to a bounding box; `mask()` then sets every cell
+outside the polygons to `NA` (removing, for example, the bit of France).
+
+```{r crop-mask}
+tavg.ann <- crop(tavg.ann, ext(uk))
+tavg.ann <- mask(tavg.ann, vect(uk))
+plot(tavg.ann)
+```
+
+## Aggregate to coarser cells
+
+`fact` is the number of cells to merge. One number applies to both
+directions; two numbers are `c(rows, columns)`, i.e. vertical then horizontal.
+
+```{r aggregate}
+a <- aggregate(tavg.ann, fact = 10,       fun = "mean", na.rm = TRUE)  # 10 x 10 blocks
+b <- aggregate(tavg.ann, fact = 50,       fun = "mean", na.rm = TRUE)  # 50 x 50 blocks
+c <- aggregate(tavg.ann, fact = c(50, 1), fun = "mean", na.rm = TRUE)  # tall, thin cells
+d <- aggregate(tavg.ann, fact = 10,       fun = "max",  na.rm = TRUE)  # maximum, not mean
+
+par(mfrow = c(2, 2))
+plot(a, main = "mean, fact = 10"); plot(b, main = "mean, fact = 50")
+plot(c, main = "mean, fact = c(50, 1)"); plot(d, main = "max, fact = 10")
+par(mfrow = c(1, 1))
+```
+
+> ✅ **EXPECT TO SEE:** Only the UK is coloured, from about 2 °C on the Scottish mountains to about 12 °C in the south-west. `res(c)` is about 0.0083° wide and 0.42° tall.
+
+> 🎉 **MILESTONE!** You can clip a raster to a study area and change its resolution.
+
+# Station 6 · Raster meets vector
+
+⏱️ **22–25 min**
+
+## Values at district centroids
+
+```{r centroids}
+uk_v <- vect(uk)                       # SpatVector version of uk
+cent <- crds(centroids(uk_v))          # matrix of centroid x/y coordinates
+
+plot(tavg.ann); plot(uk_v, add = TRUE); points(cent, pch = 16, cex = 0.4)
+
+tavg.cent <- extract(tavg.ann, as.data.frame(cent))   # columns: ID, mean
+tavg.cent <- cbind(as.data.frame(cent), tavg.cent)
+head(tavg.cent)
+```
+
+## Mean temperature per district (zonal statistics)
+
+`extract()` with polygons returns a data frame: column 1 is the polygon `ID`,
+column 2 the summarised layer. We use `[, 2]` rather than `$mean`, because the
+column is named after the layer and would change if the layer were renamed.
+
+```{r zonal}
+uk$tavg.ann <- extract(tavg.ann, uk_v, fun = mean, na.rm = TRUE)[, 2]
+
+ggplot(uk) +
+  geom_sf(aes(fill = tavg.ann), colour = NA) +
+  scale_fill_viridis_c(name = "Mean annual\ntemperature (°C)") +
+  theme_minimal()
+```
+
+## Area-weighted mean (+ optional)
+
+`weights = TRUE` weights each cell by the fraction of it that lies inside the
+polygon.
+
+```{r weighted}
+uk$tavg.ann.weighted <- extract(tavg.ann, uk_v, fun = mean,
+                                weights = TRUE, na.rm = TRUE)[, 2]
+summary(uk$tavg.ann.weighted - uk$tavg.ann)   # tiny differences at this resolution
+```
+
+**Question:** why are the weighted and unweighted means so similar here? When
+would they differ more?
+
+> ✅ **EXPECT TO SEE:** Weighted and unweighted district means differ by less than 0.02 °C.
+
+> 🎉 **MILESTONE!** You can move information between rasters and vectors: values at points and summaries over polygons.
+
+---
+
+**Congratulations!** You can now read, manipulate and map vector and raster
+data with `sf` and `terra`.

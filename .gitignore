@@ -1,0 +1,9 @@
+# R session files
+.Rhistory
+.RData
+.Rproj.user/
+*.html
+
+# Downloaded at run time by Practical 5 (geodata)
+data/climate/
+data/elevation/

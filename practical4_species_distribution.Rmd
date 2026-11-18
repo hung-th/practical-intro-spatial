@@ -1,0 +1,234 @@
+---
+title: "Practical 4: Species distribution modelling"
+subtitle: "Introduction to Spatial Models (DTC: Statistics, Data Science and AI)"
+author: "Tin Hang (Henry) Hung"
+output:
+  github_document:
+    toc: true
+    html_preview: false
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 7, fig.height = 5)
+```
+
+Rosewoods are the most seized wildlife product by value: about 35% of all
+wildlife seizures in 2005-2014, roughly double elephant ivory at 18%
+([UNODC World Wildlife Crime Report 2016](https://data.opendevelopmentmekong.net/dataset/4bfe6854-b85c-4d75-87e5-8128181c3aa1/resource/2583469a-194b-405c-b239-8c01f2c73eaa/download/exsum_wildlife_report_2016.pdf)).
+Southeast Asian rosewoods are among the most exploited. Here we model the
+distribution of *Dalbergia oliveri* as a spatial point process.
+
+The occurrence data are downloaded live from GBIF, so your numbers may differ
+slightly from your neighbour's if GBIF has been updated.
+
+⌛ **25 minutes** · practical 4 of 5 in a 2-hour session
+
+# Your route through the 25 minutes {.unnumbered}
+
+| Station | Minutes | What you do | You leave with |
+|---|---|---|---|
+| **0** Set up | 0–5 | Packages, download records from GBIF | `occ.df`, a table of records |
+| **1** Clean the records | 5–9 | Map them, remove the wrong ones | `do.clean` |
+| **2** Project to metres | 9–12 | Choose a UTM zone and reproject | `seasia_proj`, `do_proj` |
+| **3** Point pattern | 12–15 | Window, `ppp` object, test for CSR | `pp` |
+| **4** Fit and compare | 15–19 | Homogeneous and log-linear Poisson models, AIC | Two fitted models |
+| **5** Predict | 19–25 | Map the predicted intensity | Your first species distribution map |
+
+Sections marked **+ optional** can be skipped if you are short of time.
+
+# Station 0 · Set up
+
+⏱️ **0–5 min**
+
+## Packages
+
+```{r packages}
+# install.packages(c("ggplot2", "rnaturalearth", "rnaturalearthdata",
+#                    "sf", "spatstat", "spocc", "terra"))
+library(ggplot2)
+library(rnaturalearth)  # country boundaries
+library(sf)
+library(spatstat)       # point patterns: ppp(), ppm(), quadrat.test()
+library(spocc)          # occurrence data from GBIF and other providers
+library(terra)
+```
+
+## Occurrence data
+
+[GBIF](https://www.gbif.org/) (Global Biodiversity Information Facility) holds
+over 3 billion occurrence records.
+
+```{r gbif}
+# The default limit is only 500 records per provider; ask for more
+occ.raw <- occ(query = "Dalbergia oliveri", from = "gbif",
+               has_coords = TRUE, limit = 5000)
+occ.df  <- occ2df(occ.raw)     # one row per record: name, longitude, latitude, prov, ...
+nrow(occ.df)
+```
+
+```{r to-sf}
+occ.df$longitude <- as.numeric(occ.df$longitude)   # make sure coordinates are numbers
+occ.df$latitude  <- as.numeric(occ.df$latitude)
+do <- st_as_sf(occ.df, coords = c("longitude", "latitude"), crs = 4326)
+```
+
+> ✅ **EXPECT TO SEE:** A data frame with one row per record. The data are live, so your count may differ slightly from your neighbour's.
+
+> 🎉 **MILESTONE!** You can pull occurrence data for any species from GBIF.
+
+# Station 1 · Clean the records
+
+⏱️ **5–9 min**
+
+
+```{r region}
+seasia <- ne_countries(country = c("Thailand", "Laos", "Cambodia", "Vietnam", "Myanmar"),
+                       scale = "medium", returnclass = "sf")
+
+ggplot() + geom_sf(data = seasia) + geom_sf(data = do, size = 0.8) + coord_sf()
+```
+
+This looks odd: some records lie far outside the expected range. Keep only
+records inside the five countries, and drop exact duplicates.
+
+```{r clean}
+do.clean <- st_filter(do, seasia)
+do.clean <- do.clean[!duplicated(st_coordinates(do.clean)), ]
+nrow(do.clean)
+
+ggplot() + geom_sf(data = seasia) + geom_sf(data = do.clean, size = 0.8) + coord_sf()
+```
+
+> GBIF records are **presence-only** and cluster where people collect (near
+> roads, in protected areas, around herbaria). The pattern reflects both where
+> the species lives and where people looked.
+
+> 🎉 **MILESTONE!** You have a cleaned set of presence records.
+
+# Station 2 · Project to metres
+
+⏱️ **9–12 min**
+
+
+Point-process models live in continuous space: intensity is "points per unit
+**area**", so distances and areas must be in metres, not degrees.
+
+**Question:** which UTM zone covers most of the region, and what is its EPSG
+code?
+
+```{r project}
+crs_proj <- 32648   # UTM zone 48N (102-108°E). Myanmar lies west of it, so an
+                    # equal-area projection would distort areas less; UTM is fine here.
+seasia_proj <- st_transform(seasia, crs_proj)
+do_proj     <- st_transform(do.clean, crs_proj)
+```
+
+> 🎉 **MILESTONE!** Your records and study region are in metres.
+
+# Station 3 · Point pattern
+
+⏱️ **12–15 min**
+
+
+`spatstat` needs a `ppp` object: point coordinates plus an observation
+window (`owin`), here the union of the five countries.
+
+```{r ppp}
+w <- as.owin(st_union(seasia_proj))
+do.coords <- st_coordinates(do_proj)
+
+pp <- ppp(x = do.coords[, "X"], y = do.coords[, "Y"], window = w)
+pp <- spatstat.geom::rescale(pp, 1000, "km")  # metres -> km, so intensity is per km^2
+# (spatstat.geom:: is needed because terra also has a rescale() function)
+plot(pp, main = "Dalbergia oliveri records")
+```
+
+Is the pattern compatible with complete spatial randomness (CSR)?
+
+```{r quadrat}
+quadrat.test(pp, nx = 5, ny = 5)
+```
+
+> ✅ **EXPECT TO SEE:** `pp` prints as a planar point pattern in a polygonal window, in km. Check the quadrat test's p-value: are the records compatible with complete spatial randomness?
+
+> 🎉 **MILESTONE!** You have turned species records into a point pattern `spatstat` can model.
+
+# Station 4 · Fit and compare
+
+⏱️ **15–19 min**
+
+
+## Homogeneous Poisson model (null model)
+
+Constant intensity everywhere.
+
+```{r fit0}
+fit0 <- ppm(pp ~ 1)
+fit0
+intensity(pp)   # the same estimate: number of points / area
+```
+
+## Inhomogeneous Poisson model with a linear trend
+
+$$\log\lambda(s) = \beta_0 + \beta_1 x(s) + \beta_2 y(s)$$
+
+```{r fit1}
+fit1 <- ppm(pp ~ x + y)
+fit1
+```
+
+## Compare with AIC
+
+Lower AIC means a better trade-off between fit and complexity.
+
+```{r aic}
+AIC(fit0)
+AIC(fit1)
+```
+
+> 🎉 **MILESTONE!** You can fit point process models and choose between them by AIC.
+
+# Station 5 · Predict
+
+⏱️ **19–25 min**
+
+
+```{r predict}
+lambda.im <- predict(fit1, type = "trend")   # a spatstat pixel image, points per km^2
+plot(lambda.im, main = "Predicted intensity (per km^2)")
+plot(pp, add = TRUE, pch = 16, cex = 0.4)
+```
+
+Convert to a `terra` raster (coordinates back to metres) to combine it with
+other layers:
+
+```{r to-terra}
+lambda.r <- rast(as.data.frame(lambda.im), type = "xyz")
+# multiply the coordinates; ext(r) * 1000 would rescale the extent around its centre
+ext(lambda.r) <- as.vector(ext(lambda.r)) * 1000   # km -> m
+crs(lambda.r) <- paste0("EPSG:", crs_proj)
+plot(lambda.r, main = "Predicted intensity (per km^2)")
+plot(st_geometry(seasia_proj), add = TRUE)
+```
+
+**Question:** is this what you expected? Why does the prediction look so simple?
+
+The model `~ x + y` can only produce a plane on the log scale, i.e. a single
+gradient. For a more realistic surface we need meaningful covariates (climate,
+elevation) or a more flexible form. **+ optional:** try a quadratic trend:
+
+```{r poly}
+fit.poly <- ppm(pp ~ polynom(x, y, 2))
+AIC(fit.poly)
+plot(predict(fit.poly, type = "trend"), main = "Quadratic trend")
+plot(pp, add = TRUE, pch = 16, cex = 0.4)
+```
+
+> 🎉 **MILESTONE!** You have mapped a species distribution as the intensity of a point process.
+
+---
+
+**Next (Practical 5):** replace `x` and `y` with environmental covariates, for
+example WorldClim layers from `geodata::worldclim_country()`, passed to
+`ppm()` as `spatstat` images.
