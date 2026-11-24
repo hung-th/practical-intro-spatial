@@ -42,6 +42,23 @@ Practicals 4 and 5 need an internet connection. Practical 5 saves the
 WorldClim and elevation layers it downloads in `data/climate/` and
 `data/elevation/`; these are not in the repository.
 
+## Interactive explorer
+
+[Spatial Models Explorer](https://hung-th.github.io/practical-intro-spatial/explorer/)
+has four interactive figures for the lectures, in one HTML file
+(`explorer/index.html`) that runs in the browser:
+
+- [Finding Henry](https://hung-th.github.io/practical-intro-spatial/explorer/#mcdonalds):
+  an inhomogeneous Poisson process worked example (Lecture 4).
+- [Point patterns](https://hung-th.github.io/practical-intro-spatial/explorer/#point-patterns):
+  CSR, quadrat test and Ripley's K (Lecture 4).
+- [Moran's I](https://hung-th.github.io/practical-intro-spatial/explorer/#morans-i):
+  global and local Moran's I (Lecture 2).
+- [Interpolation](https://hung-th.github.io/practical-intro-spatial/explorer/#interpolation):
+  Voronoi, IDW, kNN and kriging with cross-validation (Lecture 3).
+
+Add `?embed=1` before the `#` to hide the page header, for embedding in Notion.
+
 ## Notes for demonstrators
 
 - **GBIF records change.** Practicals 4 and 5 download *Dalbergia oliveri*

@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spatial Models Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: a survey-sheet workbench. Figures on the left, instruments (controls + readout) on the right; stacks at phone width. */
+:root{
+  --paper:#f4f6f5; --surface:#ffffff; --ink:#18212c; --muted:#5a6573; --rule:#d6dce2;
+  --accent:#2457a6; --accent-soft:#e2eaf6; --on-accent:#ffffff;
+  --amber:#c47a00; --site:#b3261e;
+  --heat1:#c6d6ee; --heat3:#0f2552;
+  --hh:#c0392b; --ll:#2457a6; --hl:#eaa59c; --lh:#9fbbe6; --ns:#e7eaee;
+  --div-lo:#2f6db5; --div-hi:#c0492b;
+  --band:rgba(36,87,166,.13);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#10151b; --surface:#171e27; --ink:#e5eaf0; --muted:#98a4b2; --rule:#2a3542;
+  --accent:#82a9ea; --accent-soft:#1c2a40; --on-accent:#0e1622;
+  --amber:#f2b33d; --site:#ff7b6f;
+  --heat1:#23344e; --heat3:#e6eeff;
+  --hh:#e0604f; --ll:#5d8fe0; --hl:#8a4a44; --lh:#3a557f; --ns:#26303c;
+  --div-lo:#5d8fe0; --div-hi:#e0604f;
+  --band:rgba(130,169,234,.16);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#10151b; --surface:#171e27; --ink:#e5eaf0; --muted:#98a4b2; --rule:#2a3542;
+  --accent:#82a9ea; --accent-soft:#1c2a40; --on-accent:#0e1622;
+  --amber:#f2b33d; --site:#ff7b6f;
+  --heat1:#23344e; --heat3:#e6eeff;
+  --hh:#e0604f; --ll:#5d8fe0; --hl:#8a4a44; --lh:#3a557f; --ns:#26303c;
+  --div-lo:#5d8fe0; --div-hi:#e0604f;
+  --band:rgba(130,169,234,.16);
+  color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+header .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,4vw,40px);line-height:1.1;margin:6px 0 8px;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:68ch}
+nav.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-top:22px;border-bottom:1px solid var(--rule)}
+nav.tabs a{padding:10px 14px 9px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+nav.tabs a .n{font-family:var(--mono);font-size:11px;color:var(--muted);margin-right:6px}
+nav.tabs a:hover{color:var(--ink)}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.panel{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px 28px;margin-top:22px}
+@media (max-width:900px){.panel{grid-template-columns:minmax(0,1fr)}}
+.intro{grid-column:1/-1;max-width:74ch}
+.intro h2{font-family:var(--display);font-weight:600;font-size:24px;margin:0 0 6px;text-wrap:balance}
+.intro p{margin:0 0 8px}
+.lect{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.viz{display:grid;gap:16px;min-width:0;align-content:start}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+figure{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:10px;min-width:0}
+figure h3{font-size:13px;font-weight:600;margin:0 0 6px}
+figcaption{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+canvas{display:block;width:100%;touch-action:manipulation}
+canvas.click{cursor:crosshair}
+aside.ctrl{display:flex;flex-direction:column;gap:18px;min-width:0}
+.group{display:flex;flex-direction:column;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.group:last-child{border-bottom:0}
+.group h3{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:500}
+.field{display:flex;flex-direction:column;gap:2px}
+.field .row{display:flex;justify-content:space-between;gap:8px;font-size:13.5px}
+.field output{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+.seg{display:flex;flex-wrap:wrap;gap:6px;border:0;margin:0;padding:0}
+.seg legend{font-size:13.5px;margin-bottom:6px;padding:0}
+.seg label{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:5px 10px;border:1px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--surface)}
+.seg input{accent-color:var(--accent);margin:0}
+.seg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;cursor:pointer}
+.check input{accent-color:var(--accent);margin-top:4px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;font-size:13.5px;font-weight:500;padding:7px 12px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:4px;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button.mini{padding:4px 9px;font-family:var(--mono);font-size:12.5px}
+button:hover{filter:brightness(1.08)}
+a:focus-visible,button:focus-visible,input:focus-visible,label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.readout{background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:4px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.readout .big{font-family:var(--mono);font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.readout .lbl{font-size:12.5px;color:var(--muted)}
+.readout dl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin:0;font-size:13.5px}
+.readout dt{color:var(--muted)}
+.readout dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.verdict{font-size:13.5px;margin:0}
+.math{font-family:var(--mono);font-size:13.5px;background:var(--accent-soft);padding:8px 10px;border-radius:4px;overflow-x:auto;white-space:nowrap}
+.note{font-size:13px;color:var(--muted);margin:0}
+ul.tight{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--rule)}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.best td{font-weight:600}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+html.embed header .eyebrow,html.embed header h1,html.embed header p,html.embed footer{display:none}
+html.embed .wrap{padding-block:8px 16px}
+html.embed nav.tabs{margin-top:0}
+footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Introduction to Spatial Models · DTC</div>
+  <h1>Spatial Models Explorer</h1>
+  <p>Four interactive figures for the lectures. Move a slider, then predict what will change before you look. Every simulation uses a fixed seed, so everyone starts from the same picture.</p>
+  <nav class="tabs" aria-label="Explorers">
+    <a href="#mcdonalds" data-tab="mcdonalds"><span class="n">L4</span>Finding Henry</a>
+    <a href="#point-patterns" data-tab="point-patterns"><span class="n">L4</span>Point patterns</a>
+    <a href="#morans-i" data-tab="morans-i"><span class="n">L2</span>Moran's I</a>
+    <a href="#interpolation" data-tab="interpolation"><span class="n">L3</span>Interpolation</a>
+  </nav>
+</header>
+
+<!-- ================= McDONALD'S ================= -->
+<section class="panel" id="panel-mcdonalds" hidden>
+  <div class="intro">
+    <h2>Finding Henry Hung eating McDonald's</h2>
+    <p>Henry is reported eating at McDonald's about 16 times a term. Where should you wait to catch him? Treat each sighting as a point and model the sightings as an <b>inhomogeneous Poisson process</b>: the intensity λ(s), the expected number of sightings per km², falls with the distance d(s) to the nearest restaurant.</p>
+    <div class="math">log λ(s) = β₀ + β₁ d(s)</div>
+    <p class="lect">Lecture 4 · the four restaurants sit in an illustrative 8 × 8 km town; they are not real locations.</p>
+  </div>
+  <div class="viz">
+    <div class="figs">
+      <figure>
+        <h3>The whole town (8 × 8 km)</h3>
+        <canvas id="mc-map" class="click" aria-label="Map of predicted sighting intensity across the town"></canvas>
+        <canvas id="mc-legend" aria-hidden="true"></canvas>
+        <figcaption>Colour is λ(s) on a log scale. Click anywhere to move your stake-out. The box shows the close-up.</figcaption>
+      </figure>
+      <figure>
+        <h3>Close-up of your stake-out (1.2 × 1.2 km)</h3>
+        <canvas id="mc-zoom" class="click" aria-label="Close-up of intensity around the stake-out circle"></canvas>
+        <figcaption>The dashed circle is where you wait. The expected count μ is the volume under λ(s) inside it.</figcaption>
+      </figure>
+    </div>
+    <figure>
+      <h3>What this model leaves out</h3>
+      <ul class="tight">
+        <li><b>A favourite restaurant.</b> Give each restaurant its own β₀, or add "restaurant" as a covariate.</li>
+        <li><b>Hungry streaks.</b> Sightings come in bursts, so counts are more variable than Poisson. A Cox process (for example a log-Gaussian Cox process) adds a random field to log λ(s).</li>
+        <li><b>Who reports.</b> Sightings only happen where students are. That is presence-only data with observer bias, exactly the GBIF problem in Practical 4.</li>
+        <li><b>What he ordered.</b> A value attached to each point is a <i>mark</i>, which makes this a marked point process.</li>
+      </ul>
+    </figure>
+  </div>
+  <aside class="ctrl">
+    <div class="readout" aria-live="polite">
+      <div><div class="big" id="mc-p">–</div><div class="lbl">chance you see Henry at least once</div></div>
+      <dl>
+        <dt>Expected sightings in circle, μ</dt><dd id="mc-mu">–</dd>
+        <dt>If Henry wandered at random (CSR)</dt><dd id="mc-csr">–</dd>
+        <dt>Intensity halves every</dt><dd id="mc-half">–</dd>
+        <dt>β₀ (intensity at the door, per km²)</dt><dd id="mc-b0">–</dd>
+      </dl>
+      <p class="verdict" id="mc-sim">Press "Simulate a term" to draw one term of sightings.</p>
+    </div>
+    <div class="group">
+      <h3>Model</h3>
+      <div class="field"><div class="row"><label for="mc-b1">β₁, slope with distance (per km)</label><output id="mc-b1-o"></output></div><input type="range" id="mc-b1" min="-20" max="0" step="0.5" value="-10"></div>
+      <div class="field"><div class="row"><label for="mc-n">Expected sightings per term</label><output id="mc-n-o"></output></div><input type="range" id="mc-n" min="4" max="48" step="1" value="16"></div>
+      <label class="check"><input type="checkbox" id="mc-csrbox"> Henry eats anywhere at random (homogeneous Poisson, CSR)</label>
+    </div>
+    <div class="group">
+      <h3>Stake-out</h3>
+      <div class="field"><div class="row"><label for="mc-r">Radius (m)</label><output id="mc-r-o"></output></div><input type="range" id="mc-r" min="25" max="500" step="25" value="100"></div>
+      <div class="field"><div class="row"><label for="mc-w">Weeks you wait (of an 8-week term)</label><output id="mc-w-o"></output></div><input type="range" id="mc-w" min="1" max="8" step="1" value="8"></div>
+      <div class="btns" id="mc-jump" aria-label="Centre on a restaurant"></div>
+      <div class="btns"><button id="mc-sim-btn">Simulate a term</button></div>
+    </div>
+  </aside>
+</section>
+
+<!-- ================= POINT PATTERNS ================= -->
+<section class="panel" id="panel-point-patterns" hidden>
+  <div class="intro">
+    <h2>Is this pattern random?</h2>
+    <p>Pick a process, then check it two ways. The <b>quadrat test</b> counts points in a grid of squares and compares the counts with what complete spatial randomness (CSR) predicts. <b>Ripley's K</b>, shown here as L(r) − r, asks how many other points lie within distance r of a typical point. The grey band is the range of 39 CSR simulations with the same number of points.</p>
+    <p class="lect">Lecture 4 · unit square window, translation edge correction</p>
+  </div>
+  <div class="viz">
+    <div class="figs">
+      <figure>
+        <h3>The pattern, with quadrat counts</h3>
+        <canvas id="pp-map" aria-label="Simulated point pattern with quadrat counts"></canvas>
+        <figcaption id="pp-cap"></figcaption>
+      </figure>
+      <figure>
+        <h3>L(r) − r against a CSR envelope</h3>
+        <canvas id="pp-L" aria-label="L function minus r with simulation envelope"></canvas>
+        <figcaption>Above the band means more neighbours than chance at that distance (clustering). Below it means fewer (regularity).</figcaption>
+      </figure>
+    </div>
+  </div>
+  <aside class="ctrl">
+    <div class="readout" aria-live="polite">
+      <dl>
+        <dt>Points, n</dt><dd id="pp-n">–</dd>
+        <dt>Quadrat χ²</dt><dd id="pp-x2">–</dd>
+        <dt>Degrees of freedom</dt><dd id="pp-df">–</dd>
+        <dt>p-value (two-sided)</dt><dd id="pp-p">–</dd>
+      </dl>
+      <p class="verdict" id="pp-qv"></p>
+      <p class="verdict" id="pp-lv"></p>
+    </div>
+    <div class="group">
+      <fieldset class="seg"><legend>Process</legend>
+        <label><input type="radio" name="pp-type" value="csr" checked> CSR</label>
+        <label><input type="radio" name="pp-type" value="inhom"> Trend</label>
+        <label><input type="radio" name="pp-type" value="thomas"> Clustered</label>
+        <label><input type="radio" name="pp-type" value="hard"> Regular</label>
+      </fieldset>
+      <div class="field"><div class="row"><label for="pp-k">Quadrats per side</label><output id="pp-k-o"></output></div><input type="range" id="pp-k" min="2" max="8" step="1" value="4"></div>
+      <div class="btns"><button id="pp-new">New sample</button></div>
+    </div>
+    <div class="group">
+      <h3>Things to try</h3>
+      <ul class="tight">
+        <li>Run CSR several times. How often does the quadrat test reject at 5%?</li>
+        <li>Use "Trend". K says "clustered", but the points are independent. K assumes a constant intensity; <code>Kinhom()</code> in spatstat does not.</li>
+        <li>Change the quadrat size for "Clustered". Large squares can hide clusters.</li>
+      </ul>
+    </div>
+  </aside>
+</section>
+
+<!-- ================= MORAN ================= -->
+<section class="panel" id="panel-morans-i" hidden>
+  <div class="intro">
+    <h2>Moran's I and local clusters</h2>
+    <p>Each square is an area with one value. Neighbours are defined by a weights matrix W: <b>rook</b> neighbours share an edge, <b>queen</b> neighbours share an edge or a corner. W is row-standardised, so the spatial lag Wz is the mean of a cell's neighbours. Moran's I is the slope of the line in the scatterplot of the lag against the value.</p>
+    <div class="math">I = (n / S₀) · Σᵢ Σⱼ wᵢⱼ zᵢ zⱼ / Σᵢ zᵢ²,&nbsp;&nbsp; zᵢ = yᵢ − ȳ</div>
+    <p class="lect">Lecture 2 · 12 × 12 grid, values simulated from a spatial autoregressive model y = ρWy + ε</p>
+  </div>
+  <div class="viz">
+    <div class="figs">
+      <figure><h3>Values</h3><canvas id="mo-map" aria-label="Map of simulated values"></canvas>
+        <div class="legend"><span><i style="background:var(--div-lo)"></i>low</span><span><i style="background:var(--surface);border:1px solid var(--rule)"></i>average</span><span><i style="background:var(--div-hi)"></i>high</span></div></figure>
+      <figure><h3>Moran scatterplot</h3><canvas id="mo-sc" aria-label="Moran scatterplot"></canvas>
+        <figcaption>Each dot is a cell. Slope of the line = I.</figcaption></figure>
+      <figure><h3>Local Moran (LISA) clusters</h3><canvas id="mo-lisa" aria-label="Map of significant local clusters"></canvas>
+        <div class="legend"><span><i style="background:var(--hh)"></i>high–high</span><span><i style="background:var(--ll)"></i>low–low</span><span><i style="background:var(--hl)"></i>high–low</span><span><i style="background:var(--lh)"></i>low–high</span></div></figure>
+    </div>
+  </div>
+  <aside class="ctrl">
+    <div class="readout" aria-live="polite">
+      <div><div class="big" id="mo-I">–</div><div class="lbl">global Moran's I</div></div>
+      <dl>
+        <dt>Expected under no autocorrelation, E[I]</dt><dd id="mo-EI">–</dd>
+        <dt>Permutation p-value (499)</dt><dd id="mo-p">–</dd>
+        <dt>Significant local clusters, p &lt; 0.05</dt><dd id="mo-nraw">–</dd>
+        <dt>…after Benjamini–Hochberg</dt><dd id="mo-nbh">–</dd>
+      </dl>
+      <p class="verdict" id="mo-v"></p>
+    </div>
+    <div class="group">
+      <div class="field"><div class="row"><label for="mo-rho">ρ, strength of spatial dependence</label><output id="mo-rho-o"></output></div><input type="range" id="mo-rho" min="-0.9" max="0.95" step="0.05" value="0.8"></div>
+      <fieldset class="seg"><legend>Neighbours</legend>
+        <label><input type="radio" name="mo-w" value="rook" checked> Rook</label>
+        <label><input type="radio" name="mo-w" value="queen"> Queen</label>
+      </fieldset>
+      <label class="check"><input type="checkbox" id="mo-bh"> Show only clusters that survive Benjamini–Hochberg</label>
+      <div class="btns"><button id="mo-new">New field</button><button class="ghost" id="mo-shuf">Shuffle values</button></div>
+    </div>
+    <div class="group">
+      <h3>Things to try</h3>
+      <ul class="tight">
+        <li>Press "Shuffle values". The map keeps the same values in new places, and I falls to about E[I].</li>
+        <li>Set ρ below 0. Neighbours now tend to differ, like a chessboard, and I is negative.</li>
+        <li>Set ρ to 0 and count the local "clusters" before and after the correction. With 144 tests, about 7 are expected by chance alone.</li>
+      </ul>
+    </div>
+  </aside>
+</section>
+
+<!-- ================= INTERPOLATION ================= -->
+<section class="panel" id="panel-interpolation" hidden>
+  <div class="intro">
+    <h2>Interpolation, cross-validation and the variogram</h2>
+    <p>A smooth surface is measured with noise at a few sites. Predict it everywhere else, then judge each method by <b>leave-one-out cross-validation</b>: drop one site, predict it from the rest, and repeat for every site. In real data you never see the truth, so cross-validation is the error you can actually compute.</p>
+    <p class="lect">Lecture 3 · click the prediction map to add a site</p>
+  </div>
+  <div class="viz">
+    <div class="figs">
+      <figure><h3>The truth (normally unknown)</h3><canvas id="ip-truth" aria-label="True surface with sample sites"></canvas></figure>
+      <figure><h3 id="ip-ptitle">Prediction</h3><canvas id="ip-pred" class="click" aria-label="Predicted surface"></canvas></figure>
+    </div>
+    <figure>
+      <h3>Empirical semivariogram and spherical model</h3>
+      <canvas id="ip-vg" aria-label="Empirical semivariogram with fitted model"></canvas>
+      <figcaption>Each dot is half the mean squared difference between sites a distance h apart (larger dots average more pairs). The <b>nugget</b> is the jump at h = 0 (measurement error and very short-range variation), the <b>sill</b> is where the curve levels off, and the <b>range</b> is the distance beyond which sites are no longer correlated. Kriging uses this curve to weigh each site.</figcaption>
+    </figure>
+  </div>
+  <aside class="ctrl">
+    <div class="readout" aria-live="polite">
+      <div class="tbl"><table>
+        <thead><tr><th>Method</th><th class="num">CV RMSE</th><th class="num">True RMSE</th></tr></thead>
+        <tbody id="ip-tbl"></tbody>
+      </table></div>
+      <p class="note">Bold: lowest cross-validation error. "True RMSE" compares with the whole surface, which you only know in a simulation.</p>
+    </div>
+    <div class="group">
+      <fieldset class="seg"><legend>Method shown</legend>
+        <label><input type="radio" name="ip-m" value="nn"> Voronoi</label>
+        <label><input type="radio" name="ip-m" value="idw" checked> IDW</label>
+        <label><input type="radio" name="ip-m" value="knn"> kNN</label>
+        <label><input type="radio" name="ip-m" value="ok"> Kriging</label>
+      </fieldset>
+      <div class="field"><div class="row"><label for="ip-beta">IDW power β</label><output id="ip-beta-o"></output></div><input type="range" id="ip-beta" min="0.5" max="5" step="0.5" value="2"></div>
+      <div class="field"><div class="row"><label for="ip-k">kNN neighbours, k</label><output id="ip-k-o"></output></div><input type="range" id="ip-k" min="1" max="15" step="1" value="5"></div>
+    </div>
+    <div class="group">
+      <h3>Data</h3>
+      <div class="field"><div class="row"><label for="ip-n">Sample sites</label><output id="ip-n-o"></output></div><input type="range" id="ip-n" min="8" max="80" step="1" value="30"></div>
+      <div class="field"><div class="row"><label for="ip-sd">Measurement noise (sd)</label><output id="ip-sd-o"></output></div><input type="range" id="ip-sd" min="0" max="1.5" step="0.1" value="0.3"></div>
+      <div class="btns"><button id="ip-new">New sample</button></div>
+    </div>
+    <div class="group">
+      <h3>Variogram model (used by kriging)</h3>
+      <div class="field"><div class="row"><label for="ip-nug">Nugget</label><output id="ip-nug-o"></output></div><input type="range" id="ip-nug" min="0" max="4" step="0.05" value="0.1"></div>
+      <div class="field"><div class="row"><label for="ip-sill">Sill</label><output id="ip-sill-o"></output></div><input type="range" id="ip-sill" min="0.2" max="10" step="0.1" value="3"></div>
+      <div class="field"><div class="row"><label for="ip-rng">Range</label><output id="ip-rng-o"></output></div><input type="range" id="ip-rng" min="0.05" max="1" step="0.01" value="0.4"></div>
+      <div class="btns"><button class="ghost" id="ip-fit">Fit to the dots</button></div>
+    </div>
+  </aside>
+</section>
+
+<footer>Built for <i>Introduction to Spatial Models</i> (DTC: Statistics, Data Science and AI). Everything runs in your browser; nothing is sent anywhere.</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+if (/[?&]embed=1/.test(location.search)) document.documentElement.classList.add("embed");
+/* ---------- shared helpers ---------- */
+const $ = s => document.querySelector(s);
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function parseColor(c){
+  c = c.trim();
+  if (c[0] === '#') { let h = c.slice(1); if (h.length === 3) h = h.split('').map(x => x + x).join(''); const v = parseInt(h, 16); return [v >> 16 & 255, v >> 8 & 255, v & 255]; }
+  const m = c.match(/[\d.]+/g); return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+}
+const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+function ramp(stops, t){ t = Math.max(0, Math.min(1, t)); const s = (stops.length - 1) * t; const i = Math.min(stops.length - 2, Math.floor(s)); return lerp(stops[i], stops[i + 1], s - i); }
+const css = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+const VIRIDIS = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725'].map(parseColor);
+
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function rnorm(r){ let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+function rpois(r, mu){ if (mu > 400) return Math.max(0, Math.round(mu + Math.sqrt(mu) * rnorm(r))); const L = Math.exp(-mu); let k = 0, p = 1; do { k++; p *= r(); } while (p > L); return k - 1; }
+function shuffle(a, r){ for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+function prep(cv, hOf){
+  const w = Math.max(160, Math.round(cv.clientWidth || cv.parentElement.clientWidth));
+  const h = Math.round(hOf ? hOf(w) : w);
+  cv.style.height = h + 'px';
+  const d = window.devicePixelRatio || 1;
+  cv.width = Math.round(w * d); cv.height = Math.round(h * d);
+  const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+function niceTicks(a, b, n = 5){
+  const span = b - a; if (span <= 0) return [a];
+  const s0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(s0))), r = s0 / mag;
+  const step = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag; const out = [];
+  for (let v = Math.ceil(a / step - 1e-9) * step; v <= b + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function frame(ctx, W, H, xr, yr, xl, yl, m = { l: 48, r: 12, t: 10, b: 38 }){
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const sx = x => m.l + (x - xr[0]) / (xr[1] - xr[0]) * pw;
+  const sy = y => m.t + ph - (y - yr[0]) / (yr[1] - yr[0]) * ph;
+  ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace'; ctx.lineWidth = 1;
+  const rule = tok('--rule'), muted = tok('--muted');
+  ctx.strokeStyle = rule; ctx.fillStyle = muted;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const x of niceTicks(xr[0], xr[1], 5)) { const X = Math.round(sx(x)) + .5; ctx.beginPath(); ctx.moveTo(X, m.t); ctx.lineTo(X, m.t + ph); ctx.stroke(); ctx.fillText(fmtTick(x), X, m.t + ph + 5); }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const y of niceTicks(yr[0], yr[1], 5)) { const Y = Math.round(sy(y)) + .5; ctx.beginPath(); ctx.moveTo(m.l, Y); ctx.lineTo(m.l + pw, Y); ctx.stroke(); ctx.fillText(fmtTick(y), m.l - 6, Y); }
+  ctx.font = '12px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(xl, m.l + pw / 2, H - 2);
+  ctx.save(); ctx.translate(12, m.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText(yl, 0, 0); ctx.restore();
+  return { sx, sy, m, pw, ph };
+}
+const fmtTick = v => Math.abs(v) < 1e-12 ? '0' : (Math.abs(v) >= 100 ? v.toFixed(0) : +v.toPrecision(3)).toString();
+function fmtPct(p){ const v = p * 100; if (v < 0.05) return '<0.1%'; if (v > 99.95) return '>99.9%'; return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%'; }
+const fmtP = p => p < 0.001 ? '<0.001' : p.toFixed(3);
+function bindRange(id, fmt, on){
+  const el = $('#' + id), out = $('#' + id + '-o');
+  const sync = () => { out.textContent = fmt(+el.value); };
+  el.addEventListener('input', () => { sync(); on(+el.value); });
+  sync(); return el;
+}
+function canvasXY(cv, e){ const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; }
+const throttle = fn => { let q = false; return () => { if (q) return; q = true; requestAnimationFrame(() => { q = false; fn(); }); }; };
+
+/* chi-square tail via regularised incomplete gamma */
+function lgamma(x){ const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5]; let y = x, tmp = x + 5.5; tmp -= (x + 0.5) * Math.log(tmp); let ser = 1.000000000190015; for (let j = 0; j < 6; j++) ser += c[j] / ++y; return -tmp + Math.log(2.5066282746310005 * ser / x); }
+function gammp(a, x){
+  if (x <= 0) return 0;
+  if (x < a + 1) { let ap = a, sum = 1 / a, del = sum; for (let n = 0; n < 1000; n++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-13) break; } return sum * Math.exp(-x + a * Math.log(x) - lgamma(a)); }
+  let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+  for (let i = 1; i < 1000; i++) { const an = -i * (i - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300; c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300; d = 1 / d; const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-13) break; }
+  return 1 - Math.exp(-x + a * Math.log(x) - lgamma(a)) * h;
+}
+
+/* ================= 1. McDONALD'S ================= */
+const MC = {
+  R: [{ x: 4.0, y: 4.1, l: 'A' }, { x: 1.6, y: 4.6, l: 'B' }, { x: 6.6, y: 2.6, l: 'C' }, { x: 4.4, y: 6.9, l: 'D' }],
+  G: 200, ZS: 1.2, b1: -10, N: 16, csr: false, r: 100, weeks: 8, c: { x: 4.0, y: 4.1 }, sims: null, rng: mulberry32(1854),
+  dmin(x, y){ let m = Infinity; for (const p of this.R) { const d = Math.hypot(x - p.x, y - p.y); if (d < m) m = d; } return m; },
+  init(){
+    const G = this.G, cs = 8 / G; this.dg = new Float64Array(G * G);
+    for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) this.dg[j * G + i] = this.dmin((i + .5) * cs, (j + .5) * cs);
+    const chg = () => { this.sims = null; this.normalise(); this.render(); };
+    bindRange('mc-b1', v => v.toFixed(1), v => { this.b1 = v; chg(); });
+    bindRange('mc-n', v => v.toFixed(0), v => { this.N = v; chg(); });
+    bindRange('mc-r', v => v.toFixed(0) + ' m', v => { this.r = v; this.render(); });
+    bindRange('mc-w', v => v.toFixed(0), v => { this.weeks = v; this.sims = null; this.render(); });
+    $('#mc-csrbox').addEventListener('change', e => { this.csr = e.target.checked; chg(); });
+    const jump = $('#mc-jump');
+    for (const p of this.R) { const b = document.createElement('button'); b.className = 'ghost mini'; b.textContent = 'Wait at ' + p.l; b.addEventListener('click', () => { this.c = { x: p.x, y: p.y }; this.render(); }); jump.appendChild(b); }
+    $('#mc-sim-btn').addEventListener('click', () => { this.simulate(); this.render(); });
+    $('#mc-map').addEventListener('click', e => { const [px, py] = canvasXY(e.target, e); const g = this.geo; const x = (px - g.l) / g.s * 8, y = 8 - (py - g.t) / g.s * 8; if (x < 0 || x > 8 || y < 0 || y > 8) return; this.c = { x, y }; this.render(); });
+    $('#mc-zoom').addEventListener('click', e => { const [px, py] = canvasXY(e.target, e); const z = this.zgeo; const h = this.ZS / 2; const x = this.c.x - h + (px - z.l) / z.s * this.ZS, y = this.c.y + h - (py - z.t) / z.s * this.ZS; this.c = { x: Math.max(0, Math.min(8, x)), y: Math.max(0, Math.min(8, y)) }; this.render(); });
+    this.normalise();
+  },
+  normalise(){ const cs = 8 / this.G; let S = 0; for (const d of this.dg) S += Math.exp(this.b1 * d); this.eb0 = this.N / (S * cs * cs); },
+  lam(x, y){ if (x < 0 || x > 8 || y < 0 || y > 8) return 0; return this.csr ? this.N / 64 : this.eb0 * Math.exp(this.b1 * this.dmin(x, y)); },
+  mu(){ const rk = this.r / 1000, nr = 80, nt = 96; let s = 0; for (let k = 0; k < nr; k++) { const rho = (k + .5) / nr * rk; for (let t = 0; t < nt; t++) { const th = (t + .5) / nt * 2 * Math.PI; s += this.lam(this.c.x + rho * Math.cos(th), this.c.y + rho * Math.sin(th)) * rho; } } return s * (rk / nr) * (2 * Math.PI / nt) * this.weeks / 8; },
+  simulate(){
+    const r = this.rng, n = rpois(r, this.N * this.weeks / 8), pts = [];
+    while (pts.length < n) { const x = 8 * r(), y = 8 * r(); if (this.csr || r() < Math.exp(this.b1 * this.dmin(x, y))) pts.push({ x, y }); }
+    this.sims = pts;
+  },
+  heatColor(l, stops){ if (l <= 0) return stops[0]; return ramp(stops, (Math.log10(l) + 2) / 4.6); },
+  render(){
+    const stops = [tok('--surface'), tok('--heat1'), tok('--accent'), tok('--heat3')].map(parseColor);
+    const ink = tok('--ink'), site = tok('--site'), amber = tok('--amber'), surf = tok('--surface'), rule = tok('--rule'), muted = tok('--muted'), accent = tok('--accent');
+    const mono = '11px "IBM Plex Mono", ui-monospace, monospace';
+    /* overview */
+    const cv = $('#mc-map'), L = 30, B = 22, T = 6, Rm = 8;
+    const { ctx } = prep(cv, w => w - L - Rm + T + B);
+    const s = cv.clientWidth - L - Rm; this.geo = { l: L, t: T, s };
+    const G = this.G, off = document.createElement('canvas'); off.width = G; off.height = G;
+    const oc = off.getContext('2d'), img = oc.createImageData(G, G);
+    for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+      const l = this.csr ? this.N / 64 : this.eb0 * Math.exp(this.b1 * this.dg[j * G + i]);
+      const c = this.heatColor(l, stops), o = ((G - 1 - j) * G + i) * 4;
+      img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
+    }
+    oc.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(off, L, T, s, s);
+    const X = x => L + x / 8 * s, Y = y => T + (8 - y) / 8 * s;
+    ctx.strokeStyle = rule; ctx.lineWidth = 1; ctx.font = mono; ctx.fillStyle = muted;
+    ctx.globalAlpha = .55; for (let k = 1; k < 8; k++) { ctx.beginPath(); ctx.moveTo(X(k), T); ctx.lineTo(X(k), T + s); ctx.moveTo(L, Y(k)); ctx.lineTo(L + s, Y(k)); ctx.stroke(); } ctx.globalAlpha = 1;
+    ctx.strokeRect(L + .5, T + .5, s - 1, s - 1);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; for (let k = 0; k <= 8; k += 2) ctx.fillText(k, X(k), T + s + 4);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; for (let k = 0; k <= 8; k += 2) ctx.fillText(k, L - 5, Y(k));
+        const h = this.ZS / 2; ctx.setLineDash([3, 3]); ctx.strokeStyle = ink; ctx.strokeRect(X(this.c.x - h), Y(this.c.y + h), this.ZS / 8 * s, this.ZS / 8 * s); ctx.setLineDash([]);
+    const dot = (x, y, rad) => { ctx.beginPath(); ctx.arc(x, y, rad, 0, 2 * Math.PI); ctx.fillStyle = amber; ctx.fill(); ctx.strokeStyle = surf; ctx.lineWidth = 1.2; ctx.stroke(); };
+    if (this.sims) for (const p of this.sims) dot(X(p.x), Y(p.y), 3.4);
+    for (const p of this.R) { ctx.fillStyle = site; ctx.fillRect(X(p.x) - 5, Y(p.y) - 5, 10, 10); ctx.strokeStyle = surf; ctx.lineWidth = 1.5; ctx.strokeRect(X(p.x) - 5, Y(p.y) - 5, 10, 10); ctx.fillStyle = ink; ctx.font = '600 12px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(p.l, X(p.x) + 7, Y(p.y) - 4); }
+    const rk = this.r / 1000; ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(this.c.x), Y(this.c.y), Math.max(3, rk / 8 * s), 0, 2 * Math.PI); ctx.stroke();
+    /* legend */
+    { const lc = $('#mc-legend'); const { ctx: g, w } = prep(lc, () => 50); const x0 = L, x1 = w - Rm, n = 120;
+      for (let k = 0; k < n; k++) { g.fillStyle = css(ramp(stops, k / (n - 1))); g.fillRect(x0 + (x1 - x0) * k / n, 6, (x1 - x0) / n + 1, 10); }
+      g.strokeStyle = rule; g.strokeRect(x0 + .5, 6.5, x1 - x0 - 1, 10); g.font = mono; g.fillStyle = muted; g.textAlign = 'center'; g.textBaseline = 'top';
+      [0.01, 0.1, 1, 10, 100].forEach(v => { const xx = x0 + (Math.log10(v) + 2) / 4.6 * (x1 - x0); g.fillText(v, xx, 20); });
+      g.textAlign = 'right'; g.fillText('λ(s), sightings per km² per term', x1, 34); }
+    /* zoom */
+    const zc = $('#mc-zoom'), zl = 6, zt = 6; const { ctx: z } = prep(zc, w => w); const zs = zc.clientWidth - 2 * zl; this.zgeo = { l: zl, t: zt, s: zs };
+    const Q = 150, zo = document.createElement('canvas'); zo.width = Q; zo.height = Q; const zoc = zo.getContext('2d'), zim = zoc.createImageData(Q, Q);
+    for (let py = 0; py < Q; py++) for (let px = 0; px < Q; px++) { const x = this.c.x - h + (px + .5) / Q * this.ZS, y = this.c.y + h - (py + .5) / Q * this.ZS; const c = this.heatColor(this.lam(x, y), stops), o = (py * Q + px) * 4; zim.data[o] = c[0]; zim.data[o + 1] = c[1]; zim.data[o + 2] = c[2]; zim.data[o + 3] = 255; }
+    zoc.putImageData(zim, 0, 0); z.imageSmoothingEnabled = true; z.drawImage(zo, zl, zt, zs, zs);
+    const ZX = x => zl + (x - (this.c.x - h)) / this.ZS * zs, ZY = y => zt + (this.c.y + h - y) / this.ZS * zs;
+    z.save(); z.beginPath(); z.rect(zl, zt, zs, zs); z.clip();
+    for (const p of this.R) { z.fillStyle = site; z.fillRect(ZX(p.x) - 7, ZY(p.y) - 7, 14, 14); z.strokeStyle = surf; z.lineWidth = 2; z.strokeRect(ZX(p.x) - 7, ZY(p.y) - 7, 14, 14); z.fillStyle = surf; z.font = '600 11px "IBM Plex Sans", system-ui, sans-serif'; z.textAlign = 'center'; z.textBaseline = 'middle'; z.fillText(p.l, ZX(p.x), ZY(p.y) + .5); }
+    if (this.sims) for (const p of this.sims) { z.beginPath(); z.arc(ZX(p.x), ZY(p.y), 5, 0, 2 * Math.PI); z.fillStyle = amber; z.fill(); z.strokeStyle = surf; z.lineWidth = 1.5; z.stroke(); }
+    z.setLineDash([6, 4]); z.strokeStyle = ink; z.lineWidth = 2; z.beginPath(); z.arc(ZX(this.c.x), ZY(this.c.y), rk / this.ZS * zs, 0, 2 * Math.PI); z.stroke(); z.setLineDash([]);
+    z.beginPath(); z.moveTo(ZX(this.c.x) - 5, ZY(this.c.y)); z.lineTo(ZX(this.c.x) + 5, ZY(this.c.y)); z.moveTo(ZX(this.c.x), ZY(this.c.y) - 5); z.lineTo(ZX(this.c.x), ZY(this.c.y) + 5); z.lineWidth = 1.5; z.stroke();
+    z.restore(); z.strokeStyle = rule; z.lineWidth = 1; z.strokeRect(zl + .5, zt + .5, zs - 1, zs - 1);
+    const bar = 0.2 / this.ZS * zs; z.fillStyle = surf; z.globalAlpha = .85; z.fillRect(zl + 8, zt + zs - 30, bar + 16, 24); z.globalAlpha = 1;
+    z.strokeStyle = ink; z.lineWidth = 2; z.beginPath(); z.moveTo(zl + 16, zt + zs - 12); z.lineTo(zl + 16 + bar, zt + zs - 12); z.stroke();
+    z.fillStyle = ink; z.font = mono; z.textAlign = 'center'; z.textBaseline = 'bottom'; z.fillText('200 m', zl + 16 + bar / 2, zt + zs - 14);
+    /* readout */
+    const mu = this.mu(), muC = this.N / 64 * Math.PI * rk * rk * this.weeks / 8;
+    $('#mc-mu').textContent = mu.toFixed(2); $('#mc-p').textContent = fmtPct(1 - Math.exp(-mu));
+    $('#mc-csr').textContent = fmtPct(1 - Math.exp(-muC));
+    $('#mc-half').textContent = (this.csr || this.b1 === 0) ? 'never' : (Math.log(2) / -this.b1 * 1000).toFixed(0) + ' m';
+    $('#mc-b0').textContent = this.csr ? 'n/a' : Math.log(this.eb0).toFixed(2) + ' (' + this.eb0.toFixed(1) + ')';
+    if (this.sims) { const k = this.sims.filter(p => Math.hypot(p.x - this.c.x, p.y - this.c.y) <= rk).length;
+      $('#mc-sim').textContent = `This simulated ${this.weeks === 8 ? 'term' : this.weeks + ' weeks'}: ${this.sims.length} sightings in town, ${k} inside your circle.`; }
+    else $('#mc-sim').textContent = 'Press "Simulate a term" to draw one set of sightings.';
+  }
+};
+
+/* ================= 2. POINT PATTERNS ================= */
+const PP = {
+  type: 'csr', k: 4, rng: mulberry32(7), RMAX: 0.25, NB: 50,
+  caps: {
+    csr: 'Complete spatial randomness: every location is equally likely and points are independent (expected n = 100).',
+    inhom: 'Independent points, but the intensity rises from west to east, λ(x, y) ∝ e^{3x}.',
+    thomas: 'Thomas cluster process: unseen parent points each scatter about 10 offspring around them.',
+    hard: 'Hard-core process: points are placed at random, but no two may be closer than 0.05.'
+  },
+  init(){
+    document.querySelectorAll('input[name=pp-type]').forEach(r => r.addEventListener('change', e => { this.type = e.target.value; this.gen(); this.render(); }));
+    bindRange('pp-k', v => v + ' × ' + v, v => { this.k = v; this.render(); });
+    $('#pp-new').addEventListener('click', () => { this.gen(); this.render(); });
+    this.gen();
+  },
+  gen(){
+    const r = this.rng, P = [];
+    if (this.type === 'csr') { const n = rpois(r, 100); for (let i = 0; i < n; i++) P.push([r(), r()]); }
+    else if (this.type === 'inhom') { const g = 3, c = 100 * g / (Math.exp(g) - 1), lmax = c * Math.exp(g), n = rpois(r, lmax); for (let i = 0; i < n; i++) { const x = r(), y = r(); if (r() < Math.exp(g * (x - 1))) P.push([x, y]); } }
+    else if (this.type === 'thomas') { const np = rpois(r, 10 * 1.44); for (let p = 0; p < np; p++) { const px = -0.1 + 1.2 * r(), py = -0.1 + 1.2 * r(), m = rpois(r, 10); for (let i = 0; i < m; i++) { const x = px + 0.035 * rnorm(r), y = py + 0.035 * rnorm(r); if (x >= 0 && x <= 1 && y >= 0 && y <= 1) P.push([x, y]); } } }
+    else { let tries = 0; while (P.length < 100 && tries++ < 30000) { const x = r(), y = r(); if (P.every(q => (q[0] - x) ** 2 + (q[1] - y) ** 2 >= 0.0025)) P.push([x, y]); } }
+    this.pts = P;
+    const n = P.length; this.Lobs = this.Lfun(P); this.lo = new Float64Array(this.NB).fill(Infinity); this.hi = new Float64Array(this.NB).fill(-Infinity);
+    for (let s = 0; s < 39; s++) { const Q = []; for (let i = 0; i < n; i++) Q.push([r(), r()]); const L = this.Lfun(Q); for (let b = 0; b < this.NB; b++) { if (L[b] < this.lo[b]) this.lo[b] = L[b]; if (L[b] > this.hi[b]) this.hi[b] = L[b]; } }
+  },
+  Lfun(P){
+    const n = P.length, NB = this.NB, RM = this.RMAX, h = new Float64Array(NB), out = new Float64Array(NB);
+    if (n < 2) return out;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const dx = Math.abs(P[i][0] - P[j][0]), dy = Math.abs(P[i][1] - P[j][1]); const d = Math.hypot(dx, dy); if (d < RM) h[Math.floor(d / RM * NB)] += 1 / ((1 - dx) * (1 - dy)); }
+    let cum = 0; for (let b = 0; b < NB; b++) { cum += h[b]; const r = (b + 1) / NB * RM, K = 2 * cum / (n * (n - 1)); out[b] = Math.sqrt(K / Math.PI) - r; }
+    return out;
+  },
+  render(){
+    const ink = tok('--ink'), muted = tok('--muted'), rule = tok('--rule'), accent = tok('--accent'), band = tok('--band');
+    const cv = $('#pp-map'), { ctx } = prep(cv), W = cv.clientWidth, m = 6, s = W - 2 * m, k = this.k, P = this.pts, n = P.length;
+    ctx.strokeStyle = rule; ctx.lineWidth = 1;
+    for (let i = 1; i < k; i++) { const v = m + i / k * s; ctx.beginPath(); ctx.moveTo(v, m); ctx.lineTo(v, m + s); ctx.moveTo(m, v); ctx.lineTo(m + s, v); ctx.stroke(); }
+    ctx.strokeStyle = muted; ctx.strokeRect(m + .5, m + .5, s - 1, s - 1);
+    const cnt = new Array(k * k).fill(0); for (const p of P) { const i = Math.min(k - 1, Math.floor(p[0] * k)), j = Math.min(k - 1, Math.floor(p[1] * k)); cnt[j * k + i]++; }
+    ctx.fillStyle = ink; for (const p of P) { ctx.beginPath(); ctx.arc(m + p[0] * s, m + (1 - p[1]) * s, 2.6, 0, 2 * Math.PI); ctx.fill(); }
+    ctx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace'; ctx.fillStyle = accent; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    for (let j = 0; j < k; j++) for (let i = 0; i < k; i++) ctx.fillText(cnt[j * k + i], m + i / k * s + 4, m + (1 - (j + 1) / k) * s + 3);
+    const E = n / (k * k); let X2 = 0; for (const c of cnt) X2 += (c - E) ** 2 / E;
+    const df = k * k - 1, Pl = gammp(df / 2, X2 / 2), p = Math.min(1, 2 * Math.min(Pl, 1 - Pl));
+    $('#pp-n').textContent = n; $('#pp-x2').textContent = X2.toFixed(1); $('#pp-df').textContent = df; $('#pp-p').textContent = fmtP(p);
+    $('#pp-qv').textContent = (p < 0.05 ? 'Quadrat test: reject CSR at the 5% level' : 'Quadrat test: no evidence against CSR at the 5% level') + (p < 0.05 ? (Pl > 0.5 ? ' (counts too uneven: clustering).' : ' (counts too even: regularity).') : '.') + (E < 5 ? ' Expected count per square is under 5, so the χ² approximation is rough.' : '');
+    $('#pp-cap').textContent = this.caps[this.type];
+    /* L plot */
+    const lc = $('#pp-L'), { ctx: g } = prep(lc), Wl = lc.clientWidth, NB = this.NB, RM = this.RMAX;
+    let ymin = -0.03, ymax = 0.03; for (let b = 0; b < NB; b++) { ymin = Math.min(ymin, this.lo[b], this.Lobs[b]); ymax = Math.max(ymax, this.hi[b], this.Lobs[b]); }
+    const pad = (ymax - ymin) * .08; const F = frame(g, Wl, Wl, [0, RM], [ymin - pad, ymax + pad], 'distance r', 'L(r) − r');
+    const rs = b => (b + 1) / NB * RM;
+    g.fillStyle = band; g.beginPath(); g.moveTo(F.sx(0), F.sy(0)); for (let b = 0; b < NB; b++) g.lineTo(F.sx(rs(b)), F.sy(this.hi[b])); for (let b = NB - 1; b >= 0; b--) g.lineTo(F.sx(rs(b)), F.sy(this.lo[b])); g.lineTo(F.sx(0), F.sy(0)); g.fill();
+    g.setLineDash([4, 4]); g.strokeStyle = muted; g.lineWidth = 1; g.beginPath(); g.moveTo(F.sx(0), F.sy(0)); g.lineTo(F.sx(RM), F.sy(0)); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = accent; g.lineWidth = 2.2; g.beginPath(); g.moveTo(F.sx(0), F.sy(0)); for (let b = 0; b < NB; b++) g.lineTo(F.sx(rs(b)), F.sy(this.Lobs[b])); g.stroke();
+    g.font = '11px "IBM Plex Mono", ui-monospace, monospace'; g.fillStyle = muted; g.textAlign = 'right'; g.textBaseline = 'top'; g.fillText('grey band: 39 CSR simulations', F.m.l + F.pw - 4, F.m.t + 4);
+    const up = [], dn = []; for (let b = 0; b < NB; b++) { if (this.Lobs[b] > this.hi[b]) up.push(rs(b)); else if (this.Lobs[b] < this.lo[b]) dn.push(rs(b)); }
+    const rg = a => a.length === 1 ? 'r = ' + a[0].toFixed(3) : 'r = ' + a[0].toFixed(3) + ' to ' + a[a.length - 1].toFixed(3);
+    let t = '';
+    if (up.length) t += `Ripley's K: above the band for ${rg(up)}, so more neighbours than chance (clustering) at those distances. `;
+    if (dn.length) t += `Ripley's K: below the band for ${rg(dn)}, so fewer neighbours than chance (regularity) at those distances.`;
+    if (!t) t = "Ripley's K: inside the band at every distance, so no evidence against CSR.";
+    $('#pp-lv').textContent = t.trim();
+  }
+};
+
+/* ================= 3. MORAN ================= */
+const MO = {
+  S: 12, rho: 0.8, wt: 'rook', bh: false, rng: mulberry32(1950), perm: null,
+  init(){
+    bindRange('mo-rho', v => v.toFixed(2), v => { this.rho = v; this.perm = null; this.update(); });
+    document.querySelectorAll('input[name=mo-w]').forEach(r => r.addEventListener('change', e => { this.wt = e.target.value; this.buildW(); this.update(); }));
+    $('#mo-bh').addEventListener('change', e => { this.bh = e.target.checked; this.render(); });
+    $('#mo-new').addEventListener('click', () => { this.newEps(); this.perm = null; this.update(); });
+    $('#mo-shuf').addEventListener('click', () => { this.perm = shuffle([...Array(this.S * this.S).keys()], this.rng); this.update(); });
+    this.newEps(); this.buildW(); this.update();
+  },
+  newEps(){ const n = this.S * this.S; this.eps = Float64Array.from({ length: n }, () => rnorm(this.rng)); },
+  buildW(){
+    const S = this.S, nb = [];
+    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) { const l = []; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { if (!di && !dj) continue; if (this.wt === 'rook' && di && dj) continue; const a = i + di, b = j + dj; if (a >= 0 && a < S && b >= 0 && b < S) l.push(b * S + a); } nb.push(l); }
+    this.nb = nb;
+  },
+  lag(z){ const out = new Float64Array(z.length); for (let i = 0; i < z.length; i++) { let s = 0; for (const j of this.nb[i]) s += z[j]; out[i] = s / this.nb[i].length; } return out; },
+  moranI(z){ const lg = this.lag(z); let num = 0, den = 0; for (let i = 0; i < z.length; i++) { num += z[i] * lg[i]; den += z[i] * z[i]; } return num / den; },
+  update(){
+    const n = this.S * this.S; let y = Float64Array.from(this.eps);
+    for (let it = 0; it < 300; it++) { const lg = this.lag(y); for (let i = 0; i < n; i++) y[i] = this.eps[i] + this.rho * lg[i]; }
+    if (this.perm) y = Float64Array.from(this.perm, k => y[k]);
+    const mean = y.reduce((a, b) => a + b, 0) / n; const z = y.map(v => v - mean); this.z = z; this.lg = this.lag(z);
+    this.I = this.moranI(z); this.EI = -1 / (n - 1);
+    const r = this.rng, zz = Float64Array.from(z); let ge = 0, le = 0;
+    for (let p = 0; p < 499; p++) { shuffle(zz, r); const Ip = this.moranI(zz); if (Ip >= this.I) ge++; if (Ip <= this.I) le++; }
+    this.p = (Math.min(ge, le) + 1) / 500; this.dir = this.I > this.EI ? 'pos' : 'neg';
+    /* local Moran with conditional permutation */
+    let m2 = 0; for (const v of z) m2 += v * v; m2 /= n;
+    const pl = new Float64Array(n), pool = new Int32Array(n - 1);
+    for (let i = 0; i < n; i++) {
+      const Ii = z[i] * this.lg[i] / m2, k = this.nb[i].length; let c = 0; for (let a = 0, b = 0; a < n; a++) if (a !== i) pool[b++] = a;
+      let ge2 = 0, le2 = 0;
+      for (let p = 0; p < 199; p++) { let s = 0; for (let q = 0; q < k; q++) { const j = q + Math.floor(r() * (n - 1 - q)); const t = pool[q]; pool[q] = pool[j]; pool[j] = t; s += z[pool[q]]; } const Ip = z[i] * (s / k) / m2; if (Ip >= Ii) ge2++; if (Ip <= Ii) le2++; }
+      pl[i] = (Math.min(ge2, le2) + 1) / 200;
+    }
+    this.pl = pl;
+    const ord = [...pl].sort((a, b) => a - b); let cut = -1; for (let k = 0; k < n; k++) if (ord[k] <= 0.05 * (k + 1) / n) cut = ord[k];
+    this.cut = cut; this.nraw = [...pl].filter(p => p < 0.05).length; this.nbh = cut < 0 ? 0 : [...pl].filter(p => p <= cut && p < 0.05).length;
+    this.render();
+  },
+  render(){
+    const S = this.S, n = S * S, z = this.z, lg = this.lg;
+    const lo = parseColor(tok('--div-lo')), mid = parseColor(tok('--surface')), hi = parseColor(tok('--div-hi')), rule = tok('--rule');
+    let zmax = 0; for (const v of z) zmax = Math.max(zmax, Math.abs(v));
+    const grid = (cv, colorOf) => { const { ctx } = prep(cv), W = cv.clientWidth, m = 4, c = (W - 2 * m) / S; for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) { ctx.fillStyle = colorOf(j * S + i); ctx.fillRect(m + i * c, m + (S - 1 - j) * c, c + .5, c + .5); } ctx.strokeStyle = rule; ctx.lineWidth = 1; for (let k = 0; k <= S; k++) { ctx.beginPath(); ctx.moveTo(m + k * c, m); ctx.lineTo(m + k * c, m + S * c); ctx.moveTo(m, m + k * c); ctx.lineTo(m + S * c, m + k * c); ctx.stroke(); } };
+    grid($('#mo-map'), i => css(z[i] < 0 ? lerp(mid, lo, -z[i] / zmax) : lerp(mid, hi, z[i] / zmax)));
+    const cols = { HH: tok('--hh'), LL: tok('--ll'), HL: tok('--hl'), LH: tok('--lh'), NS: tok('--ns') };
+    grid($('#mo-lisa'), i => { const sig = this.bh ? (this.cut >= 0 && this.pl[i] <= this.cut && this.pl[i] < 0.05) : this.pl[i] < 0.05; if (!sig) return cols.NS; return cols[(z[i] > 0 ? 'H' : 'L') + (lg[i] > 0 ? 'H' : 'L')]; });
+    /* scatter */
+    const sc = $('#mo-sc'), { ctx: g } = prep(sc), W = sc.clientWidth; let a = 0; for (let i = 0; i < n; i++) a = Math.max(a, Math.abs(z[i]), Math.abs(lg[i])); a *= 1.1;
+    const F = frame(g, W, W, [-a, a], [-a, a], 'value, z', 'neighbour mean, Wz', { l: 46, r: 10, t: 10, b: 38 });
+    g.strokeStyle = tok('--muted'); g.lineWidth = 1; g.beginPath(); g.moveTo(F.sx(0), F.sy(-a)); g.lineTo(F.sx(0), F.sy(a)); g.moveTo(F.sx(-a), F.sy(0)); g.lineTo(F.sx(a), F.sy(0)); g.stroke();
+    g.font = '600 11px "IBM Plex Mono", ui-monospace, monospace'; g.fillStyle = tok('--muted');
+    g.textAlign = 'right'; g.textBaseline = 'top'; g.fillText('HH', F.sx(a) - 4, F.sy(a) + 4); g.textBaseline = 'bottom'; g.fillText('HL', F.sx(a) - 4, F.sy(-a) - 4);
+    g.textAlign = 'left'; g.fillText('LL', F.sx(-a) + 4, F.sy(-a) - 4); g.textBaseline = 'top'; g.fillText('LH', F.sx(-a) + 4, F.sy(a) + 4);
+    g.fillStyle = tok('--ink'); g.globalAlpha = .7; for (let i = 0; i < n; i++) { g.beginPath(); g.arc(F.sx(z[i]), F.sy(lg[i]), 2.6, 0, 2 * Math.PI); g.fill(); } g.globalAlpha = 1;
+    g.save(); g.beginPath(); g.rect(F.m.l, F.m.t, F.pw, F.ph); g.clip(); g.strokeStyle = tok('--accent'); g.lineWidth = 2.2; g.beginPath(); g.moveTo(F.sx(-a), F.sy(-a * this.I)); g.lineTo(F.sx(a), F.sy(a * this.I)); g.stroke(); g.restore();
+    $('#mo-I').textContent = this.I.toFixed(3); $('#mo-EI').textContent = this.EI.toFixed(3); $('#mo-p').textContent = fmtP(this.p);
+    $('#mo-nraw').textContent = this.nraw + ' of ' + n; $('#mo-nbh').textContent = this.nbh + ' of ' + n;
+    $('#mo-v').textContent = this.p < 0.05 ? (this.dir === 'pos' ? 'Similar values sit next to each other more than chance would give: positive spatial autocorrelation.' : 'Neighbours differ more than chance would give: negative spatial autocorrelation.') : 'No evidence of spatial autocorrelation: I is within what random rearrangements of the same values give.';
+  }
+};
+
+/* ================= 4. INTERPOLATION ================= */
+const IP = {
+  P: 100, method: 'idw', beta: 2, k: 5, n: 30, sd: 0.3, nug: 0.1, sill: 3, range: 0.4, rng: mulberry32(1855),
+  truth(x, y){ return 5 + 3 * Math.exp(-((x - .3) ** 2 + (y - .7) ** 2) / .02) + 2.5 * Math.exp(-((x - .7) ** 2 + (y - .35) ** 2) / .035) - 2 * Math.exp(-((x - .78) ** 2 + (y - .8) ** 2) / .015) + 1.5 * x; },
+  init(){
+    const P = this.P; this.T = new Float64Array(P * P); let lo = Infinity, hi = -Infinity;
+    for (let j = 0; j < P; j++) for (let i = 0; i < P; i++) { const v = this.truth((i + .5) / P, (j + .5) / P); this.T[j * P + i] = v; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    this.zr = [lo - .3, hi + .3];
+    const up = throttle(() => this.update());
+    document.querySelectorAll('input[name=ip-m]').forEach(r => r.addEventListener('change', e => { this.method = e.target.value; up(); }));
+    bindRange('ip-beta', v => v.toFixed(1), v => { this.beta = v; up(); });
+    bindRange('ip-k', v => v.toFixed(0), v => { this.k = v; up(); });
+    bindRange('ip-n', v => v.toFixed(0), v => { this.n = v; this.sample(); up(); });
+    bindRange('ip-sd', v => v.toFixed(1), v => { this.sd = v; this.sample(); up(); });
+    this.nugEl = bindRange('ip-nug', v => v.toFixed(2), v => { this.nug = v; up(); });
+    this.sillEl = bindRange('ip-sill', v => v.toFixed(1), v => { this.sill = v; up(); });
+    this.rngEl = bindRange('ip-rng', v => v.toFixed(2), v => { this.range = v; up(); });
+    $('#ip-new').addEventListener('click', () => { this.sample(true); this.update(); });
+    $('#ip-fit').addEventListener('click', () => { this.fitVg(); this.update(); });
+    $('#ip-pred').addEventListener('click', e => { const [px, py] = canvasXY(e.target, e); const g = this.pg; const x = (px - g.m) / g.s, y = 1 - (py - g.m) / g.s; if (x < 0 || x > 1 || y < 0 || y > 1) return; this.sites.push([x, y, this.truth(x, y) + this.sd * rnorm(this.rng)]); this.update(); });
+    this.sample(true); this.fitVg();
+  },
+  sample(fresh){
+    if (fresh || !this.base) { this.base = Array.from({ length: 80 }, () => [this.rng(), this.rng(), rnorm(this.rng)]); }
+    this.sites = this.base.slice(0, this.n).map(([x, y, e]) => [x, y, this.truth(x, y) + this.sd * e]);
+  },
+  gam(h){ if (h <= 0) return 0; const s = Math.max(this.sill, this.nug); if (h >= this.range) return s; const u = h / this.range; return this.nug + (s - this.nug) * (1.5 * u - 0.5 * u * u * u); },
+  predictor(method, S){
+    const n = S.length;
+    if (method === 'nn') return (x, y) => { let b = Infinity, v = 0; for (const s of S) { const d = (s[0] - x) ** 2 + (s[1] - y) ** 2; if (d < b) { b = d; v = s[2]; } } return v; };
+    if (method === 'idw') { const be = this.beta; return (x, y) => { let num = 0, den = 0; for (const s of S) { const d = Math.hypot(s[0] - x, s[1] - y); if (d < 1e-9) return s[2]; const w = Math.pow(d, -be); num += w * s[2]; den += w; } return num / den; }; }
+    if (method === 'knn') { const k = Math.min(this.k, n); return (x, y) => { const d = S.map(s => [(s[0] - x) ** 2 + (s[1] - y) ** 2, s[2]]).sort((a, b) => a[0] - b[0]); let t = 0; for (let i = 0; i < k; i++) t += d[i][1]; return t / k; }; }
+    /* ordinary kriging, dual form: solve once, predict in O(n) */
+    const A = [], b = [];
+    for (let i = 0; i < n; i++) { const row = []; for (let j = 0; j < n; j++) row.push(this.gam(Math.hypot(S[i][0] - S[j][0], S[i][1] - S[j][1]))); row.push(1); A.push(row); b.push(S[i][2]); }
+    A.push(new Array(n).fill(1).concat([0])); b.push(0);
+    const u = solve(A, b); if (!u) return this.predictor('idw', S);
+    return (x, y) => { let v = u[n]; for (let i = 0; i < n; i++) v += u[i] * this.gam(Math.hypot(S[i][0] - x, S[i][1] - y)); return v; };
+  },
+  evaluate(method){
+    const S = this.sites, n = S.length, f = this.predictor(method, S), P = this.P, grid = new Float64Array(P * P); let se = 0;
+    for (let j = 0; j < P; j++) for (let i = 0; i < P; i++) { const v = f((i + .5) / P, (j + .5) / P); grid[j * P + i] = v; se += (v - this.T[j * P + i]) ** 2; }
+    let cv = 0; for (let i = 0; i < n; i++) { const rest = S.filter((_, k) => k !== i); const g = this.predictor(method, rest); cv += (g(S[i][0], S[i][1]) - S[i][2]) ** 2; }
+    return { grid, true: Math.sqrt(se / (P * P)), cv: Math.sqrt(cv / n) };
+  },
+  empirical(){
+    const S = this.sites, NB = 14, HM = 0.7, sum = new Float64Array(NB), cnt = new Float64Array(NB);
+    for (let i = 0; i < S.length; i++) for (let j = i + 1; j < S.length; j++) { const h = Math.hypot(S[i][0] - S[j][0], S[i][1] - S[j][1]); if (h < HM) { const b = Math.floor(h / HM * NB); sum[b] += (S[i][2] - S[j][2]) ** 2; cnt[b]++; } }
+    const out = []; for (let b = 0; b < NB; b++) if (cnt[b] > 0) out.push({ h: (b + .5) / NB * HM, g: sum[b] / (2 * cnt[b]), n: cnt[b] }); return out;
+  },
+  fitVg(){
+    const E = this.empirical(); if (!E.length) return; const gm = Math.max(...E.map(e => e.g)); let best = [Infinity];
+    const keep = [this.nug, this.sill, this.range];
+    for (let a = 0; a <= 16; a++) for (let b = 1; b <= 20; b++) for (let c = 1; c <= 20; c++) {
+      this.nug = gm * a / 32; this.sill = gm * 1.5 * b / 20; this.range = 0.05 * c; if (this.sill < this.nug) continue;
+      let L = 0; for (const e of E) L += e.n * (e.g - this.gam(e.h)) ** 2; if (L < best[0]) best = [L, this.nug, this.sill, this.range];
+    }
+    [this.nug, this.sill, this.range] = best[0] < Infinity ? best.slice(1) : keep;
+    this.nug = Math.min(4, Math.round(this.nug / .05) * .05); this.sill = Math.min(10, Math.max(.2, Math.round(this.sill * 10) / 10)); this.range = Math.round(this.range * 100) / 100;
+    for (const [el, v, f] of [[this.nugEl, this.nug, 2], [this.sillEl, this.sill, 1], [this.rngEl, this.range, 2]]) { el.value = v; $('#' + el.id + '-o').textContent = v.toFixed(f); }
+  },
+  update(){
+    const names = { nn: 'Voronoi (nearest site)', idw: `IDW (β = ${this.beta})`, knn: `kNN mean (k = ${this.k})`, ok: 'Ordinary kriging' };
+    this.res = {}; for (const m of ['nn', 'idw', 'knn', 'ok']) this.res[m] = this.evaluate(m);
+    const bestCV = Object.keys(this.res).reduce((a, b) => this.res[a].cv <= this.res[b].cv ? a : b);
+    $('#ip-tbl').innerHTML = Object.keys(this.res).map(m => `<tr class="${m === bestCV ? 'best' : ''} ${m === this.method ? 'sel' : ''}"><td>${names[m]}</td><td class="num">${this.res[m].cv.toFixed(3)}</td><td class="num">${this.res[m].true.toFixed(3)}</td></tr>`).join('');
+    $('#ip-ptitle').textContent = 'Prediction: ' + names[this.method];
+    this.render();
+  },
+  drawField(cv, grid){
+    const { ctx } = prep(cv), W = cv.clientWidth, m = 4, s = W - 2 * m, P = this.P;
+    const off = document.createElement('canvas'); off.width = P; off.height = P; const oc = off.getContext('2d'), img = oc.createImageData(P, P);
+    for (let j = 0; j < P; j++) for (let i = 0; i < P; i++) { const c = ramp(VIRIDIS, (grid[j * P + i] - this.zr[0]) / (this.zr[1] - this.zr[0])), o = ((P - 1 - j) * P + i) * 4; img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255; }
+    oc.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = this.method !== 'nn' || grid === this.T; ctx.drawImage(off, m, m, s, s);
+    for (const st of this.sites) { ctx.beginPath(); ctx.arc(m + st[0] * s, m + (1 - st[1]) * s, 3.2, 0, 2 * Math.PI); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = '#111111'; ctx.lineWidth = 1.2; ctx.stroke(); }
+    return { m, s };
+  },
+  render(){
+    if (!this.res) return;
+    this.drawField($('#ip-truth'), this.T);
+    this.pg = this.drawField($('#ip-pred'), this.res[this.method].grid);
+    const cv = $('#ip-vg'), { ctx } = prep(cv, w => Math.max(220, Math.min(320, w * 0.5))), W = cv.clientWidth, H = parseFloat(cv.style.height);
+    const E = this.empirical(), ym = Math.max(this.sill, this.nug, ...E.map(e => e.g)) * 1.15 || 1;
+    const F = frame(ctx, W, H, [0, 0.7], [0, ym], 'distance h', 'semivariance γ(h)');
+    const muted = tok('--muted'), accent = tok('--accent'), ink = tok('--ink');
+    ctx.save(); ctx.beginPath(); ctx.rect(F.m.l, F.m.t, F.pw, F.ph); ctx.clip();
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = muted; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(F.sx(0), F.sy(Math.max(this.sill, this.nug))); ctx.lineTo(F.sx(.7), F.sy(Math.max(this.sill, this.nug))); ctx.moveTo(F.sx(this.range), F.sy(0)); ctx.lineTo(F.sx(this.range), F.sy(ym)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = ink; ctx.globalAlpha = .75; for (const e of E) { ctx.beginPath(); ctx.arc(F.sx(e.h), F.sy(e.g), Math.min(8, 2 + Math.sqrt(e.n) / 2.5), 0, 2 * Math.PI); ctx.fill(); } ctx.globalAlpha = 1;
+    ctx.strokeStyle = accent; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(F.sx(0), F.sy(0)); for (let k = 1; k <= 200; k++) { const h = k / 200 * .7; ctx.lineTo(F.sx(h), F.sy(this.gam(h))); } ctx.stroke();
+    ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(F.sx(0), F.sy(0), 3, 0, 2 * Math.PI); ctx.fill();
+    ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace'; ctx.fillStyle = muted; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('sill', F.sx(.7) - 30, F.sy(Math.max(this.sill, this.nug)) - 3); ctx.fillText('range', F.sx(this.range) + 4, F.sy(0) - 4);
+    if (this.nug > 0.02) { ctx.textBaseline = 'middle'; ctx.fillText('← nugget', F.sx(0) + 6, F.sy(this.nug)); }
+    ctx.restore();
+  }
+};
+function solve(A, b){
+  const n = b.length, M = A.map((r, i) => r.concat([b[i]]));
+  for (let c = 0; c < n; c++) {
+    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-12) return null; [M[c], M[p]] = [M[p], M[c]];
+    for (let r = c + 1; r < n; r++) { const f = M[r][c] / M[c][c]; if (!f) continue; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+  }
+  const x = new Array(n); for (let r = n - 1; r >= 0; r--) { let s = M[r][n]; for (let k = r + 1; k < n; k++) s -= M[r][k] * x[k]; x[r] = s / M[r][r]; } return x;
+}
+
+/* ================= routing ================= */
+const TABS = { 'mcdonalds': MC, 'point-patterns': PP, 'morans-i': MO, 'interpolation': IP };
+const ready = {}; let current = null;
+function route(){
+  const h = location.hash.slice(1); const id = TABS[h] ? h : 'mcdonalds'; current = id;
+  for (const k in TABS) $('#panel-' + k).hidden = k !== id;
+  document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.tab === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  if (!ready[id]) { TABS[id].init(); ready[id] = true; if (id === 'interpolation') { IP.update(); return; } }
+  TABS[id].render();
+}
+window.addEventListener('hashchange', route);
+const rerender = () => { if (current && ready[current]) TABS[current].render(); };
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(rerender, 120); });
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rerender); } catch (e) {}
+new MutationObserver(rerender).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(rerender);
+route();
+})();
+</script>
+</body>
+</html>
